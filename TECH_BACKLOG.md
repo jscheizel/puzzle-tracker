@@ -13,17 +13,6 @@ Last reviewed: 2026-09-09 (initial audit)
 
 ## Open
 
-### TECH-003 — Five icons render blank on Android and web
-**Status:** Open · **Priority:** High
-
-`gearshape.fill`, `bolt.fill`, `star.fill`, `square.and.arrow.up` and `square.and.arrow.down` are used in the screens but missing from `MAPPING` in [components/ui/icon-symbol.tsx:16](components/ui/icon-symbol.tsx#L16). `MaterialIcons` receives `name={undefined}` and renders nothing.
-
-This includes the dashboard settings gear, which is the only entry point to export/import. Since `eas.json` builds an Android APK, this affects the build that actually gets installed.
-
-Fix: add the five Material Icons mappings.
-
----
-
 ### TECH-004 — `IconSymbol` accepts any string as an icon name
 **Status:** Open · **Priority:** Medium
 
@@ -216,6 +205,17 @@ Both `addPuzzle` and `addTimeEntry` use `Date.now().toString()` as the primary k
 Unlikely through the UI today, but it becomes a real problem for any bulk import or sync feature (FEAT-010).
 
 Fix: `crypto.randomUUID()` or `expo-crypto`.
+
+---
+
+### TECH-003 — Five icons render blank on Android and web
+**Status:** Done · **Priority:** High
+
+`gearshape.fill`, `bolt.fill`, `star.fill`, `square.and.arrow.up` and `square.and.arrow.down` were used in the screens but missing from `MAPPING`, so `MaterialIcons` received `name={undefined}` and rendered nothing. This included the dashboard settings gear, the only entry point to export/import.
+
+**Resolved by** adding the five mappings: `settings`, `bolt`, `star`, `file-upload`, `file-download`. All fourteen icons used through `IconSymbol` are now mapped, verified against the MaterialIcons glyphmap.
+
+Note this can still recur — `IconSymbol` accepts any string as a name. TECH-004 is the fix that would make it a compile error.
 
 ---
 

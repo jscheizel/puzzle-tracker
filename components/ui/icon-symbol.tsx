@@ -28,6 +28,11 @@ const MAPPING = {
   'chart.bar.fill': 'bar-chart',
   'ruler.fill': 'straighten',
   'chart.pie': 'pie-chart',
+  'gearshape.fill': 'settings',
+  'bolt.fill': 'bolt',
+  'star.fill': 'star',
+  'square.and.arrow.up': 'file-upload',
+  'square.and.arrow.down': 'file-download',
 } as IconMapping;
 
 /**
