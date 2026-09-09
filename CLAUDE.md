@@ -27,7 +27,9 @@ constants/
   theme.ts                Colors.light / Colors.dark, Fonts
 context/PuzzleContext.tsx thin context wrapper over the data hook
 hooks/use-puzzle-data.ts  ALL state, mutations and derived queries
-components/               themed-text, themed-view, ui/icon-symbol + unused template components
+components/               themed-text, themed-view, ui/icon-symbol, storage-error-banner
+                          (+ unused template components)
+lib/image-store.ts        puzzle photo files on disk, and data-URI conversion for backups
 ```
 
 ## Architecture
@@ -39,7 +41,9 @@ usePuzzleData  →  PuzzleProvider  →  usePuzzles()  →  screens
 ```
 
 - **All app state is one `useState<AppData>`** in `hooks/use-puzzle-data.ts`. Every mutation and every derived query (`getBestTime`, `getBestPPM`, `getPuzzleEntries`) lives there.
-- **Persistence** is a single AsyncStorage key, `puzzle_tracker_data`, holding the whole `AppData` as JSON. An effect rewrites the entire blob whenever `data` changes.
+- **Persistence** is a single AsyncStorage key, `puzzle_tracker_data`, holding the whole `AppData` as JSON. An effect rewrites the entire blob whenever `data` changes. **Writing is gated behind a `canPersist` flag that only a successful load sets** — if the initial read fails we do not know what is on disk, and writing the empty in-memory state would destroy it.
+- **Storage failures are visible, never silent.** `persistError` and `loadError` are exposed on the context and rendered by `components/storage-error-banner.tsx`, which overlays every screen with a Retry action. If you add a storage path, route its errors through that state rather than a bare `console.error`.
+- **Images are files, not state.** `lib/image-store.ts` owns the `<document>/puzzle-images/` directory. The hook copies picked images in, and deletes them when a puzzle is removed or its photo replaced.
 - **Screens own their own UI state** (forms, modals, editing flags). Nothing form-related goes in the context.
 - **Theming** is manual: every screen does `const theme = Colors[useColorScheme() ?? 'light']` and passes `theme` down as a prop. There is no styled-components / NativeWind / theme context.
 - **Icons** go through `components/ui/icon-symbol.tsx`, which maps SF Symbol names to Material Icons on Android and web. `icon-symbol.ios.tsx` uses native SF Symbols. **Adding an icon requires adding it to `MAPPING`** or it silently renders nothing.
@@ -51,9 +55,11 @@ usePuzzleData  →  PuzzleProvider  →  usePuzzles()  →  screens
 - `Puzzle` — title, brand, pieces, optional difficulty, optional `imageUri`
 - `TimeEntry` — puzzleId, timeInSeconds, ISO date string, optional flipping/edge splits, optional name
 
-There is **no schema version field and no migration mechanism** (TECH-012). Any change to these types has to account for data already on users' devices.
+There is **no schema version field** (TECH-012), but `loadData` does run an ad-hoc migration for image storage — see below. Any change to these types has to account for data already on users' devices.
 
-`imageUri` currently holds a full `data:image/jpeg;base64,...` string, not a file path. This is a known critical problem — see TECH-001 before touching image handling.
+`imageUri` holds a **file URI** pointing into `<document>/puzzle-images/`, managed by `lib/image-store.ts`. It used to hold an inline base64 data URI; records in that old format are migrated to files on load. Never write a data URI back onto a puzzle — it would end up in the storage blob again, which is what TECH-001 fixed.
+
+The one place data URIs are still correct is **backups**: `getExportData()` inlines images so the file is portable to another device, and `importData()` writes them back out. Runtime state always uses file URIs.
 
 ## Conventions
 
@@ -93,10 +99,10 @@ There is **no test suite** (TECH-015). Typecheck and lint are the only automated
 - Adding an `IconSymbol` name without adding it to `MAPPING` fails silently on Android and web. Five icons are already broken this way (TECH-003).
 - Date handling mixes `toISOString()` with `toLocaleDateString()` and shifts dates by a day west of UTC (TECH-005).
 - `formatTime` exists in four files with three different behaviours (TECH-009). Check which one you are looking at.
-- Writes to AsyncStorage that fail are swallowed into `console.error` and the UI still shows success (TECH-002).
+- Puzzle `imageUri` values are file URIs. Writing a base64 data URI onto a puzzle re-introduces TECH-001.
 
 ## Status
 
 Working, usable, unreleased. Not published to any store; installed via EAS-built APK. See [README.md](README.md) for how to get it onto a phone.
 
-Almost the entire app is uncommitted working-tree changes on `master` (TECH-019), and there is no git remote.
+Source lives at [github.com/jscheizel/puzzle-tracker](https://github.com/jscheizel/puzzle-tracker) (public, MIT). Default branch is `main`. Commits use a GitHub noreply email — keep it that way; `user.email` is set locally in this repo.

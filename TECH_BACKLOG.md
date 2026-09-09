@@ -13,24 +13,6 @@ Last reviewed: 2026-09-09 (initial audit)
 
 ## Open
 
-### TECH-001 — Puzzle photos are base64-encoded into AsyncStorage
-**Status:** Open · **Priority:** Critical
-
-`pickImage` stores the picked image as a `data:image/jpeg;base64,...` string directly on the puzzle record ([app/(tabs)/puzzles.tsx:116](<app/(tabs)/puzzles.tsx#L116>)), so every photo ends up inside the single JSON blob under the `puzzle_tracker_data` key. Android's AsyncStorage defaults to a **6 MB** database and the project has no `expo-build-properties` override to raise it. At roughly 80–150 KB per image, the store fills up after somewhere around 40–70 puzzles and all further writes fail.
-
-Fix: write images to app storage via `expo-file-system` and persist only the file URI. Needs a migration for existing base64 entries, plus a decision on what export/import does with image files (see TECH-012).
-
----
-
-### TECH-002 — Failed writes to AsyncStorage are silently swallowed
-**Status:** Open · **Priority:** Critical
-
-The persist effect catches write errors and only calls `console.error` ([hooks/use-puzzle-data.ts:18](hooks/use-puzzle-data.ts#L18)). In-memory state still shows the new data, so the user sees their session saved, keeps adding more, and loses everything on next app launch with no warning at any point.
-
-Fix: surface persist failures in the UI (banner or alert) and consider retaining a last-known-good copy. Pairs with TECH-001 — that ticket removes the most likely cause, this one makes any remaining failure visible.
-
----
-
 ### TECH-003 — Five icons render blank on Android and web
 **Status:** Open · **Priority:** High
 
@@ -239,4 +221,26 @@ Fix: `crypto.randomUUID()` or `expo-crypto`.
 
 ## Done
 
-*Nothing yet. Completed tickets move here with their original number and a one-line note on how they were resolved.*
+### TECH-001 — Puzzle photos are base64-encoded into AsyncStorage
+**Status:** Done · **Priority:** Critical
+
+Photos were stored as `data:image/jpeg;base64,...` strings on the puzzle record, so every image was serialised into the single `puzzle_tracker_data` key. Android's AsyncStorage defaults to a 6 MB database, so a few dozen photos filled it and every subsequent write failed.
+
+**Resolved by** adding `lib/image-store.ts`. Images are now copied into `<document>/puzzle-images/` and only the file URI is persisted. `pickImage` no longer requests `base64` from the picker, and picture quality went back up from 0.3 to 0.7 since size is no longer a constraint. Existing base64 records migrate to files automatically on load; a photo that fails to migrate keeps its data URI rather than being dropped. Image files are deleted when a puzzle is deleted or its photo replaced.
+
+Backups stay portable: `getExportData()` inlines images as data URIs so a backup file works on another device, and import writes them back out to disk.
+
+---
+
+### TECH-002 — Failed writes to AsyncStorage are silently swallowed
+**Status:** Done · **Priority:** Critical
+
+Write errors were caught and only logged to `console.error`, so the UI showed data as saved while nothing had been written.
+
+**Resolved by** tracking `persistError` and `loadError` in `usePuzzleData` and surfacing them through `components/storage-error-banner.tsx`, which overlays every screen with an explanation and a Retry action whenever storage is failing.
+
+This also fixed an unreported data-loss bug found while working on the ticket: **a failed *read* caused the empty in-memory state to be written straight over the good stored data.** The persist effect ran as soon as `isLoading` flipped to false regardless of whether the load had succeeded, so one transient read error wiped the collection. Writing is now gated behind a `canPersist` flag that only a successful load sets, and the banner tells the user that saving is paused. `loadData` also validates the parsed shape instead of trusting it.
+
+---
+
+*Completed tickets move here with their original number and a note on how they were resolved.*

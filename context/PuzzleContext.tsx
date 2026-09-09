@@ -6,6 +6,11 @@ interface PuzzleContextType {
     puzzles: Puzzle[];
     timeEntries: TimeEntry[];
     isLoading: boolean;
+    /** Set when writing to storage failed. The UI must surface this — data is unsaved. */
+    persistError: string | null;
+    /** Set when reading from storage failed. Writes stay blocked until a load succeeds. */
+    loadError: string | null;
+    retryPersist: () => Promise<boolean>;
     addPuzzle: (puzzle: Omit<Puzzle, 'id'>) => Puzzle;
     addTimeEntry: (entry: Omit<TimeEntry, 'id'>) => TimeEntry;
     updatePuzzle: (puzzle: Puzzle) => void;
@@ -15,6 +20,8 @@ interface PuzzleContextType {
     getPuzzleEntries: (puzzleId: string) => TimeEntry[];
     getBestTime: (puzzleId: string) => number | null;
     getBestPPM: (puzzleId: string) => number | null;
+    /** A portable snapshot with images inlined, for writing a backup file. */
+    getExportData: () => Promise<AppData>;
     refresh: () => Promise<void>;
     importData: (data: AppData) => Promise<void>;
 }

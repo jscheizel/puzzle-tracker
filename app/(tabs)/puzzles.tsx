@@ -112,12 +112,13 @@ export default function PuzzlesScreen() {
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.3, // Reduced quality for storage efficiency
-      base64: true,
+      quality: 0.7,
     });
 
-    if (!result.canceled && result.assets[0].base64) {
-      setFormImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+    // The picked URI is a temporary one. addPuzzle/updatePuzzle copy it into
+    // the app's own image storage; only that stored URI is ever persisted.
+    if (!result.canceled && result.assets[0].uri) {
+      setFormImage(result.assets[0].uri);
     }
   };
 

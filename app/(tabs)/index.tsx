@@ -46,12 +46,14 @@ const formatDateForInput = (dateStr: string) => {
 export default function HomeScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
-  const { puzzles, timeEntries, updateTimeEntry, importData } = usePuzzles();
+  const { puzzles, timeEntries, updateTimeEntry, importData, getExportData } = usePuzzles();
   const [isSettingsVisible, setIsSettingsVisible] = React.useState(false);
 
   const handleExport = async () => {
     try {
-      const data = { puzzles, timeEntries };
+      // Images live as files on disk; getExportData inlines them so the backup
+      // is self-contained and restorable on another device.
+      const data = await getExportData();
 
       if (Platform.OS === 'web') {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
