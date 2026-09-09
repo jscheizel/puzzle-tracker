@@ -107,3 +107,7 @@ If you're going to work on it, start with:
 Everything lives on your phone and nowhere else. That also means **nothing is backed up unless you back it up.** If you lose the phone, you lose your times.
 
 Open the ⚙️ settings icon on the Dashboard and use **Export Data** now and then. It saves a single file you can put wherever you keep things safe, and **Import Data** brings it all back.
+
+## License
+
+[MIT](LICENSE) — free to use, modify and share, with no warranty.
